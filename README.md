@@ -5,7 +5,7 @@
 
 # 🌌 Nymphs SkyBlend Toolkit
 
-A Blender addon suite for Skyrim modders — built by the Nymph Nerds for the Nymph Nerds.  
+A Blender 4.5 addon suite for Skyrim modders — built by the Nymph Nerds for the Nymph Nerds.  
 SkyBlend helps you import, patch, and rebuild Skyrim materials with proper PBR workflows,  
 NIF-based shader parsing, emissive fixes, PBR map generation, and texture lookup through MO2’s VFS.
 
