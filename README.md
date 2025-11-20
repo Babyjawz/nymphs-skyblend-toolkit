@@ -1,1 +1,3 @@
-Nymphs SkyBlend Toolkit
+# Nymphs SkyBlend Toolkit
+
+See docs/QUICKSTART.md

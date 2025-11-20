@@ -1,0 +1,115 @@
+Blender 4.0 seems to have updated the Principled BSDF node—there’s a change in how it handles the "Emission" socket. Previously, this socket was simply labeled "Emission," but now the script refers to "Emission Color," which could be problematic. Let me double-check if this change holds in Blender 4.1.
+
+In Blender 4.0, the Principled BSDF has a variety of inputs, including "Base Color," "Emission," and others. It seems the input name for emission is actually "Emission Color," but the label in the UI is likely just "Emission." I’ll keep the code consistent with the input alias and minimize any risks. Also, it looks like "LBL_EM_STRENGTH" might be unused.
+
+There are some redundant or unreachable code sections that should be cleaned up. In functions like _detect_pbr, resolve_textures_for_anchor, and build_nodes_unified, there are stray lines after return statements that don’t affect the functionality but contribute unnecessary bloat. I should also consider consolidating multiple definitions of emissive* functions.
+
+I noticed a few redundant or inconsistent areas. There’s an unnecessary second set of "emissive_" properties that could lead to UI duplication, as both the updated "emission" and older "emissive*" properties exist in the PropertyGroup. I'll need to decide whether both should be kept or cleaned up for clarity. Also, the "FORCED_PBR" vs "NONPBR" labeling should stay consistent.
+
+There are a few conflicts and redundancies to address. First, the use of both emission_* and emissive_* properties could cause confusion; I suggest removing or aliasing them. Also, build_nodes_unified should pass is_pbr correctly to prevent inconsistent logging. Finally, some unreachable code exists in _resolve_textures_for_anchor and _detect_pbr and should be removed for clarity.
+
+A mismatch for the “Emission Color” label might cause issues, but since it's working, I can suggest switching to "Emission" if a KeyError occurs. For alpha mixing, I propose combining the slider with texture alpha to drive the Mix Shader Fac. There are also a few unused variables and layout mismatches to address, along with some code checks for non-existent attributes. I'll search for relevant occurrences in the file to track these down properly.
+
+
+# ============================================================
+# 🧹 CLEANUP / FIX CHECKLIST — Skyrim Material Patcher v2.0
+# ============================================================
+
+# 1️⃣ Remove duplicate code blocks
+# ------------------------------------------------------------
+# - Delete earlier duplicates of:
+#     class SKPBR_OT_RebuildFromNIF(...)
+#     class SKPBR_OT_BuildAuto(...)
+#     class SKPBR_OT_LoadJSONAndBuild(...)
+#     PropertyGroup (where emission, rough_mult, etc. live)
+# - Keep ONLY the **last** (lowest) occurrence of each class.
+#   Python uses the last definition, older ones are redundant.
+
+# 2️⃣ Keep correct alpha property update
+# ------------------------------------------------------------
+# ✅ Keep this version:
+#   alpha_strength: FloatProperty(
+#       name="Alpha Strength",
+#       default=1.0, min=0.0, max=1.0,
+#       update=lambda s,c: _update_alpha_mix(s.id_data),
+#       description="Controls transparency (0=transparent, 1=opaque)"
+#   )
+# 🚫 Remove older duplicates that use:
+#   update=lambda s,c: _update_socket(...)
+
+# 3️⃣ Keep one UI panel only
+# ------------------------------------------------------------
+# - Delete duplicated panels (SKPBR_PT_UI, SKPBR_PT_MainPanel, etc.)
+# - Keep the last one that includes:
+#     col.prop(mat.skpbr, "alpha_strength")
+
+# 4️⃣ Unify emissive properties
+# ------------------------------------------------------------
+# - Keep the unified trio:
+#     emission_on, emission_strength, emission_color
+# - Remove or comment out the legacy:
+#     emissive_strength, emissive_color
+# - Update all node/prop references to match the unified naming.
+
+# 5️⃣ Fix build_nodes_unified calls
+# ------------------------------------------------------------
+# In every builder where you call build_nodes_unified(), make it:
+#   if has_pbr or force_pbr:
+#       build_nodes_unified(mat, textures, is_pbr=True)
+#   else:
+#       build_nodes_unified(mat, textures, is_pbr=False)
+
+# 6️⃣ Keep correct _update_alpha_mix() helper
+# ------------------------------------------------------------
+# - Ensure exactly one definition exists (global scope)
+# - It should locate "AlphaMixShader" and set mix.inputs["Fac"].default_value
+
+# 7️⃣ Optional: Tidy UI duplicates
+# ------------------------------------------------------------
+# - You currently show `use_parallax_m` twice.
+#   Keep only one prop line for it.
+
+# 8️⃣ Socket naming future-proofing
+# ------------------------------------------------------------
+# - If you ever get:
+#       KeyError: 'Emission Color'
+#   → change the socket key to "Emission" instead.
+#   (Depends on Blender version, but yours works fine now.)
+
+# ============================================================
+# ✅ When done: Reload addon in Blender (Edit > Preferences > Add-ons > Refresh)
+# ============================================================
+
+
+What we achieved today (full log)
+
+✅ Kept PyNifly emissive data through rebuilds
+We capture emissive color & strength from PyNifly (and flags), store on the material, and re-apply them after every build, so your glow survives VFS/manual rebuilds. (Your restore block sits right after the node build and before return — perfect.)
+
+✅ Auto NIF linking
+If a NIF path isn’t explicitly set, you auto-derive it from the base texture path, so the emissive import “just works” for common mod layouts.
+
+✅ Unified builder still supports non-PBR
+When only Diffuse + Normal exist, you build the vanilla graph; when PBR maps are present (or force is on), you build the PBR graph. Status text reflects this.
+
+✅ Live Emission UI
+Emission On/Strength/Color are in the panel and wired so changing them updates the nodes live. (The AO and parallax bits stayed intact.)
+
+✅ New Alpha Transparency Pipeline (working)
+We added a Transparent BSDF + Mix Shader (AlphaMixShader) that blends between transparent and your Principled BSDF.
+The Alpha Strength slider (0 = fully transparent, 1 = fully opaque) drives the Fac, and your material’s blend mode and shadow mode are switched to BLEND / CLIP automatically when the system is built.
+The property’s update handler finds AlphaMixShader and updates its Fac, so your viewport responds instantly.
+
+✅ Blender-internal Python settled
+We verified you’re editing/running under Blender’s embedded 3.11, so import paths and node names all align with what Blender actually ships.
+
+✅ UI header/version
+The panel title now reflects your new version/tag, so you can tell at a glance which build is active.
+
+Nice-to-have next (optional)
+
+Multiply slider with texture alpha: If you want cutouts to honor the _d texture’s alpha, you can feed BaseTex.outputs["Alpha"] into a Math > Multiply with your slider, and use that product as the Mix Shader’s Fac. (Ask and I’ll drop the exact code at the exact place.)
+
+Deduplicate the file: do the pruning from item (1) so there’s only one PropertyGroup, one set of operators, one panel. This will avoid mysterious “why did that change not take” moments.
+
+Rename “Emission Color” -> “Emission” if Blender ever errors: Only if you get a KeyError on some machines.

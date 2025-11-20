@@ -1,0 +1,166 @@
+# 🧩 Skyrim NIF Emissive Patcher – Development Notes
+
+## 📖 Overview
+This document records the full debugging and development journey of the emissive patching system used in **Skyrim Mat Patcher** and **PyNifly** integration experiments. It serves as a technical reference for how we moved from unstable DLL-based reads to a stable PyFFI-based solution inside Blender.
+
+## 🧱 1. Starting Point
+Goal:
+- Load Skyrim `.nif` meshes
+- Read and modify emissive color + multiple values
+- Save updated NIFs for automated glowmap/emissive tuning
+- Run safely inside **Blender 4.5’s embedded Python**
+Initial approach used **PyNifly**, a custom wrapper around `NiflyDLL.dll` (C++).
+
+## 🧩 2. PyNifly Attempts
+Location:
+
+C:\Users<user>\AppData\Roaming\Blender Foundation\Blender\4.5\scripts\addons\io_scene_nifly\
+
+Tested DLL exports (via `pefile`):
+
+getShapeName
+getAllShapeNames
+getShaderTextureSlot
+findBlockByName
+getShapes
+getRootName
+
+✅ DLL loaded  
+✅ Shape names and block info returned  
+❌ All shader or texture lookups caused:
+
+OSError: exception: access violation reading 0x0000000000000000
+
+These were null-pointer crashes in the DLL — most likely due to struct misalignment between `ctypes` definitions and the x64 DLL layout.
+
+## 🧨 3. Crash Analysis
+We verified exported functions:
+
+getShaderTextureSlot addr=0x000E3C60
+setShaderTextureSlot addr=0x000E4AF0
+
+DLL returned handles correctly but failed when dereferencing nested block pointers (shaders, textures). The memory errors confirmed Blender’s embedded Python couldn’t safely call those native routines.
+Result: **PyNifly unreliable for full NIF parsing.**
+
+## 🧠 4. Pivot to PyFFI
+Switched to **PyFFI** (pure Python) for safe structure parsing.
+Installation:
+```bash
+"D:\Games\Steam\steamapps\common\Blender\4.5\python\bin\python.exe" -m pip install git+https://github.com/niftools/pyffi.git
+
+Then replaced the outdated nif.xml with a custom Skyrim SE version to support BSTriShape, BSLightingShaderProperty, etc.:
+
+C:\Users\<user>\AppData\Roaming\Blender Foundation\Blender\4.5\scripts\addons\skyrim_mat_patcher\thirdparty\pyffi\formats\nif\nif.xml
+
+After updating, PyFFI correctly parsed Skyrim SSE NIFs.
+💡 5. Success
+
+Example output:
+
+🧩 Shader block #33 (BSLightingShaderProperty)
+  Emissive Color   = (1.000, 1.000, 1.000)
+  Emissive Multiple= 2.500
+  Texture Set:
+    Diffuse : textures\architecture\whiterun\WRWindows01.dds
+    Normal  : textures\architecture\whiterun\WRWindows01_n.dds
+    Glow    : textures\architecture\whiterun\WRWindows01_g.dds
+
+Edits now save correctly:
+
+✅ Saved new NIF: WHHouse03TGC_WR_emissive_tuned.nif
+Modified 1 emissive material(s).
+
+Even though the multiple normalized internally (0.7 → 1.75), the patch persisted and was visible in NifSkope.
+⚙️ 6. Batch Processing
+
+We added:
+
+    Recursive folder scanning
+
+    Mirrored output directory
+
+    .tmp write + rename (to avoid 0 KB files)
+
+    Optional overwrite behavior
+    Example setup:
+
+INPUT_DIR  = r"D:\Nymphs\mods\Skyrim Fantasy Overhaul - Base Object Swapper\meshes\architecture\winterhold\WinterholdTGC"
+OUTPUT_DIR = r"D:\Nymphs\mods\Nymphs -Glowmaps\meshes\architecture\winterhold\WinterholdTGC"
+EMISSIVE_MULTIPLE = 0.7
+EMISSIVE_COLOR = (1.0, 0.92, 0.78)
+RECURSIVE = True
+
+Now the script automatically patches every .nif file in the tree.
+🧵 7. Multiprocessing Tests
+
+Attempted to use:
+
+from multiprocessing import Pool
+
+But Blender raised:
+
+FileNotFoundError: No such file or directory '...patch_emissive.py'
+
+Reason: Blender executes scripts in memory, not from .py files on disk. Child processes can’t import the in-memory module.
+Solution: stay single-threaded inside Blender, or later use ThreadPoolExecutor.
+🧰 8. Final Working Version
+
+    ✅ PyFFI + Skyrim SE nif.xml
+
+    ✅ Safe I/O and write handling
+
+    ✅ Configurable emissive and color
+
+    ✅ Folder recursion
+
+    ✅ Compatible inside Blender
+
+    ⚙️ Slow but stable
+
+🚀 9. Next Steps
+
+    Integrate into the Skyrim Mat Patcher add-on UI
+
+        Run in a background thread/operator
+
+        Show progress bar ([3/53])
+
+    Later: optional PyNifly acceleration when DLL is fixed
+
+    Add JSON report / log export
+
+    Optional: per-material color tint controls
+
+🧾 TL;DR — What We Learned
+Component	Result
+PyNifly DLL	Fast but unstable — unsafe struct dereferences
+PyFFI	Safe pure-Python fallback
+nif.xml	Must include SSE BSTriShape and BSLightingShaderProperty definitions
+Multiprocessing	Not supported in Blender — use threading
+0 KB NIFs	Prevented by .tmp write/rename fix
+Emissive scaling	Normalized internally by Skyrim
+Add-on future	Threaded background worker integration
+Outcome	Stable, repeatable, and Blender-safe emissive patcher
+📂 Example Output Summary
+
+🧩 Shader block #33
+  Emissive Color   = (1.0, 0.92, 0.78)
+  Emissive Multiple= 0.7
+  Textures:
+    WRWindows01.dds
+    WRWindows01_n.dds
+    WRWindows01_g.dds
+✅ Saved: WHHouse03TGC_WR.nif
+
+🧙 Acknowledgements
+
+    Figment / NifTools Team – for PyFFI base structures
+
+    Blender Add-on Development Community – for embedded Python troubleshooting
+
+    Nymphs Project – testing ground for Winterhold architectural NIFs
+
+Author: BabyJ (Nymphs Project)
+Date: October 2025
+Version: Dev Log 1.0
+Add-on Target: Skyrim Mat Patcher 2.x (Blender 4.5)

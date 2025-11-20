@@ -1,0 +1,202 @@
+# 🎯 Skyrim Tools – Unified Architecture Plan
+
+## 🧱 Overview
+**Skyrim Tools** is a unified suite that combines:
+- A **Blender Add-on** for Skyrim PBR texture generation and material patching.
+- A **Standalone Emissive Patcher** for batch editing emissive data in `.nif` files.
+- A **Shared third-party dependency set** (bundled `pynifly`, `pyffi`, `numpy`, `pillow`, and Matyalatte’s DDS exporter).
+
+Everything lives inside one distributable folder structure, so artists and modders can install or run it without setting up Python dependencies.
+
+---
+
+## 📂 Folder Structure
+
+```
+Skyrim_Tools/
+│
+├── blender_addon/                  # Blender-side suite
+│   ├── __init__.py                 # Unified entry point (registers all modules)
+│   ├── core.py                     # Shared constants, helpers, paths, config
+│   ├── pbrgen.py                   # Skyrim PBR texture generator
+│   ├── patcher_nodes.py            # Node-building logic
+│   ├── patcher_ops.py              # Operators for material application
+│   ├── ui_panels.py                # Blender UI panels
+│   └── thirdparty/
+│       ├── blender_dds_addon/      # Matyalatte DDS exporter integration
+│       ├── numpy/
+│       ├── pillow/
+│       ├── pynifly/                # Forked NIF I/O library
+│       ├── pyffi/                  # Bundled PyFFI (NIF structures)
+│       └── __init__.py             # Adds this folder to sys.path
+│
+└── emissive_patcher/               # Standalone batch NIF emissive patcher
+    ├── __main__.py                 # CLI entry point
+    ├── batch_patch.py              # Main logic using pynifly/pyffi
+    ├── utils/
+    │   ├── nif_helpers.py
+    │   └── logging_utils.py
+    └── thirdparty/ (optional)      # or use the same shared deps
+```
+
+---
+
+## 🧠 Core Design Philosophy
+
+1. **No functional refactors.**  
+   Existing logic stays identical; code is only separated for clarity.
+
+2. **Shared conventions.**  
+   Both Blender and batch tools import `core.py` for suffixes, colorspace, and config.
+
+3. **Local dependencies.**  
+   Everything needed lives under `thirdparty/`.  
+   Both entry points add it to `sys.path` before import.
+
+4. **Two independent runtimes.**  
+   - Blender Add-on runs inside Blender’s Python.
+   - Emissive patcher runs as a separate Python process, using the same libs.
+
+5. **Optional integration bridge.**  
+   The Blender UI can launch the external emissive patcher with one button.
+
+---
+
+## ⚙️ thirdparty/__init__.py
+
+Ensures bundled dependencies take precedence:
+
+```python
+# thirdparty/__init__.py
+import sys, os
+_here = os.path.dirname(__file__)
+if _here not in sys.path:
+    sys.path.insert(0, _here)
+```
+
+Now simple imports like `import pyffi` or `import pynifly`
+use your local copies automatically.
+
+---
+
+## 🔧 Unified Register Layout (Blender Add-on)
+
+```python
+# blender_addon/__init__.py
+bl_info = {
+    "name": "Skyrim Tools",
+    "author": "Your Name",
+    "version": (2, 0, 0),
+    "blender": (4, 5, 0),
+    "category": "Material",
+    "description": "Unified Skyrim PBR Generator + Material Patcher"
+}
+
+import bpy, importlib, sys, os
+from . import core, patcher_nodes, patcher_ops, ui_panels, pbrgen
+
+modules = (core, patcher_nodes, patcher_ops, ui_panels, pbrgen)
+
+def register():
+    for m in modules:
+        importlib.reload(m)
+        if hasattr(m, "register"): m.register()
+    print("[Skyrim Tools] loaded.")
+
+def unregister():
+    for m in reversed(modules):
+        if hasattr(m, "unregister"): m.unregister()
+```
+
+---
+
+## 🎛️ Launching the Emissive Patcher from Blender
+
+```python
+# in patcher_ops.py or a dedicated operator file
+import bpy, subprocess, sys, os
+
+class EMISSIVE_OT_run_batch(bpy.types.Operator):
+    bl_idname = "skyrimtools.run_emissive_batch"
+    bl_label = "Run Emissive Batch Patcher"
+    bl_description = "Launch external emissive patcher for NIFs"
+
+    def execute(self, context):
+        root = os.path.dirname(os.path.dirname(__file__))
+        script = os.path.join(root, "emissive_patcher", "__main__.py")
+        subprocess.Popen([sys.executable, script])
+        self.report({'INFO'}, "Launched Emissive Batch Patcher.")
+        return {'FINISHED'}
+```
+
+→ Add a button in your Blender UI panel:
+```python
+layout.operator("skyrimtools.run_emissive_batch", icon="OUTLINER_OB_LIGHT")
+```
+
+---
+
+## ⚙️ Shared Config Example (core.py)
+
+```python
+# blender_addon/core.py
+import json, os
+CONFIG_PATH = os.path.join(os.path.expanduser("~"), ".skyrimtools_config.json")
+
+def load_config():
+    if os.path.exists(CONFIG_PATH):
+        with open(CONFIG_PATH, "r", encoding="utf8") as f:
+            return json.load(f)
+    return {"dds_format": "BC7_UNORM", "overwrite": True}
+
+def save_config(cfg):
+    with open(CONFIG_PATH, "w", encoding="utf8") as f:
+        json.dump(cfg, f, indent=2)
+
+def build_paths(stem, folder):
+    suffixes = {"base":"", "normal":"n", "parallax":"p",
+                "rmaos":"rmaos", "m":"m", "s":"s", "glow":"g"}
+    import os
+    return {k: os.path.join(folder, f"{stem}_{v}.dds" if v else f"{stem}.dds")
+            for k,v in suffixes.items()}
+```
+
+---
+
+## 🧩 Workflow Summary
+
+| Step | Tool | Action |
+|------|------|---------|
+| 1 | Blender Add-on | Generate Skyrim PBR textures (`PBRGen`) |
+| 2 | Blender Add-on | Auto-apply maps to selected object (`Material Patcher`) |
+| 3 | (Optional) | Click “Run Emissive Batch Patcher” to batch-process `.nif` emissives |
+| 4 | Emissive Patcher | Uses `pynifly` + `pyffi` to write emissive data back to NIF files |
+| 5 | Both | Share configs, suffix logic, and local dependencies |
+
+---
+
+## ✅ Benefits
+
+- **Self-contained** – no pip installs, no external paths.
+- **Cross-tool consistency** – identical suffix, colorspace, and DDS handling.
+- **Modular** – you can work on the generator, patcher, or batch tool independently.
+- **Expandable** – future tools (e.g., collision patcher, parallax normalizer) can be dropped in easily.
+
+---
+
+## 🚀 Optional Future Additions
+
+- Real-time log viewer panel inside Blender (tail the emissive patcher output).
+- UI toggles for “Run Batch on Export” automation.
+- Shared progress reporting via a lightweight socket or JSON file.
+
+---
+
+### 🧩 TL;DR
+
+> **Skyrim Tools** is a unified toolkit that provides:
+> - a Blender-native pipeline for PBR texture generation and material application,
+> - a stand-alone emissive batch patcher for `.nif` editing,
+> - and a shared dependency + config system to keep everything stable and portable.
+
+---

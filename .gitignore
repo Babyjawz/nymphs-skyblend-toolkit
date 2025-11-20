@@ -1,0 +1,58 @@
+# ---------------------------------
+# Python cache & build artifacts
+# ---------------------------------
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.pdb
+*.tmp
+*.bak
+*.swp
+
+# ---------------------------------
+# Blender / Addon cache
+# ---------------------------------
+*.blend1
+*.blend2
+*.blend@
+*.blend~
+*.blend?
+*.blend.old
+blender_backup/
+
+# ---------------------------------
+# OS junk files
+# ---------------------------------
+.DS_Store
+Thumbs.db
+ehthumbs.db
+desktop.ini
+
+# ---------------------------------
+# IDE / Editor junk
+# ---------------------------------
+.vscode/
+.idea/
+*.code-workspace
+*.iml
+
+# ---------------------------------
+# Logs & temp data
+# ---------------------------------
+*.log
+*.orig
+*.tmp
+*.temp
+*.cache
+*.config
+*.trace
+
+
+
+# ---------------------------------
+# Build/Release archives
+# ---------------------------------
+*.zip
+*.7z
+*.rar

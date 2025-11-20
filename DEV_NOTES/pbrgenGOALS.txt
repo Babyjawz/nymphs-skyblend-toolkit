@@ -1,0 +1,75 @@
+🧩 Skyrim PBR Additions — Enhanced PBRGen for Blender
+
+This enhanced version of PBRGen adds full support for Skyrim’s modern PBR and ParallaxGen/PGPatcher texture conventions, including accurate channel packing, optional advanced maps, and seamless DDS export.
+
+🔹 1. RMAOS — Skyrim-Accurate Channel Packing
+
+Rebuilt from the ground up to match Skyrim’s PBR pipeline, ensuring compatibility with ParallaxGen, PGPatcher, and BSLightingShaderProperty materials.
+
+Channel	Function	Source
+R	Gloss (1 − Roughness, gamma 0.5)	From rough map
+G	Metalness	From metal map
+B	Ambient Occlusion	From AO map
+A	Specular Intensity	From specular map (linear, not inverted)not inverted)
+
+✨ Results in natural contrast, correct specular behavior, and visual parity with verified Skyrim PBR packs (e.g. SacredLeaf01, Tree Bark, etc.).
+
+🔹 2. Complex Mask — _m.dds
+
+Implements Skyrim’s “Environment / Complex Material Mask” used for reflective, emissive, or layered materials.
+
+Channel	Function	Derived From
+R	Reflectivity / Fresnel intensity	Specular or metal
+G	Detail mask / microblend	Inverted roughness
+B	AO or emissive hint	AO map
+A	Constant 255	—
+
+🟢 Optional toggle: “Generate Complex Mask (_m)”
+Outputs _m.dds compatible with _em.dds and _envmask.dds shader inputs.
+
+🔹 3. Subsurface Tint — _s.dds
+
+Generates subsurface tint/specular maps exactly as Skyrim uses them — with three selectable styles matching vanilla use cases.
+
+Mode	Description	Ideal Use
+🩸 Skin / Organic	Red-pink tint + gloss	Skin, wax, meat
+🌿 Foliage / Vegetation	Green-biased tint + gloss	Leaves, grass
+⚪ Specular Only	Grayscale, no tint	Metal, stone, armor
+
+🟢 Toggles:
+
+Generate Subsurface Map (_s)
+
+Subsurface Tint Mode: Skin / Organic, Foliage / Vegetation, Specular Only
+
+🔹 4. UI Additions
+
+All new options appear under the Extras section in the Blender Add-on Panel:
+
+Option	Default	Description
+Generate Complex Mask (_m)	Off	Builds _m.dds for complex reflective/emissive materials
+Generate Subsurface Map (_s)	Off	Builds _s.dds tint/specular maps
+Subsurface Tint Mode	Skin / Organic	Choose tinting behavior for _s.dds generation
+
+🔹 5. Improvements & Compatibility
+
+Skyrim-accurate RMAOS output (no magenta tint).
+
+Keeps Matyalatte DDS export system untouched.
+
+Eliminates redundant _basecolor_basecolor.dds naming.
+
+Subtle progress output for long exports.
+
+Fully compatible with Blender 4.5+ and Skyrim PBR shaders.
+
+🧱 Output Summary
+Texture	Example Filename	Notes
+Base Color	ElmBark.dds	Original albedo
+Normal	ElmBark_n.dds	Tangent-space normal
+Height	ElmBark_p.dds	Parallax / height
+RMAOS	ElmBark_rmaos.dds	Gloss / Metal / AO / Spec
+Complex Mask	ElmBark_m.dds	Optional environment mask
+Subsurface Tint	ElmBark_s.dds	Optional SSS / specular tint
+
+💡 These changes make your exported textures drop-in ready for Skyrim’s current-gen PBR pipelines (ParallaxGen, PGPatcher, and TruePBR materials), while keeping the classic workflow intact for all other games.

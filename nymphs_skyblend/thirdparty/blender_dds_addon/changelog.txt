@@ -1,0 +1,86 @@
+ver 0.5.0
+- Fixed a crash in Blender 4.5 after exporting textures. (#34)
+- Added options to change the color space of imported textures. (#37)
+  The DDS addon now defaults LDR textures to sRGB.
+- Added an option to handle premultiplied alpha. (#38)
+- Added support for Windows on ARM64. (#36)
+- Updated submodules. (#35)
+  - DirectXTex: from June2024 to July2025.
+  - astc-encoder: from 4.8.0 to 5.3.0.
+- Options are now grouped in collapsible boxes. (#39)
+
+ver 0.4.3
+- Fixed a bug where DLL changed locale settings on Windows.
+
+ver 0.4.2
+- Updated DirectXTex to June2024 release
+  (including fix for HDR codec to avoid buffer overread for some malformed files)
+- Updated astc-encoder to 4.8.0 release
+- Fixed a bug that exported dds files have wrong flags.
+
+ver 0.4.1
+- Added support for drag-drop import
+
+ver 0.4.0
+- Added support for arm64 chips on macOS (e.g. Apple M1)
+- Added support for ASTC formats
+- Fixed errors when importing and exporting snorm textures
+- Fixed a bug that the addon removes alpha from HDR textures.
+
+ver 0.3.5
+- Fixed typos
+- Added support for texture arrays with mipmaps
+- Updated DirectXTex to mar2024 release
+- Added support for A4B4G4R4_UNORM
+
+ver 0.3.4
+- Fixed a bug that SNORM textures are broken when importing and exporting.
+
+ver 0.3.3
+- Fixed a crash when closing Blender after exporting BC6 or BC7 textures.
+- Fixed a bug that sRGB formats make textures brighter when exporting.
+- Fixed an error when importing files from some specific directory structures.
+- Fixed a bug that the `Import from a Directory` operation can not count DDS files correctly.
+- Fixed an error when releasing DLL resources on Linux.
+- Made the addon release DLL resources for each operation.
+- Added an error for ARM devices.
+
+ver 0.3.2
+- Fixed an error when importing dds without image editor opened.
+- Fixed an error when changing workspace with file picker opened.
+
+ver 0.3.1
+- Fixed an error when loading volume textures.
+
+ver 0.3.0
+- Support texture arrays and volume textures.
+
+ver 0.2.1
+- Fixed a bug that Blender can't remove the addon after using it in the process.
+- Added "Image Filter" option. (Possible to use cubic filter for mip generation.)
+- Improved error messages for unsupported files.
+
+ver 0.2.0
+- Added "Import from a Directory" operation
+- Added "Export All Images" operation
+- Added custom properties to store meta data
+- Updated texconv to fix a bug that cubemap images will be written on non-zeroed buffers
+- Refined codes
+
+ver 0.1.3
+- Supported dds files that have no fourCC
+- Supported UINT and SINT formats
+- Used "sRGB" as a color space for SRGB formats
+- Refined codes
+
+ver 0.1.2
+- Improved exporting speed for cubemaps.
+- Improved fourCC handling.
+- Improved error handling for unsupported formats.
+
+ver 0.1.1
+- Added support for cubemaps
+- Fixed typo
+
+ver 0.1.0
+- Initial release

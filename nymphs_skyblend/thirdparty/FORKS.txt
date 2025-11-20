@@ -1,0 +1,125 @@
+____________________________________________________________________________________________
+pynifly     
+
+    # --- Begin Fix ---
+    # Attempt to load Bad Dog's version (NiflyDLL.dll), fallback to legacy nifly.dll
+    base_dir = os.path.dirname(__file__)
+    dll_candidates = [
+        os.path.join(base_dir, "NiflyDLL.dll"),
+        os.path.join(base_dir, "nifly.dll"),
+    ]
+
+    nifly = None
+    for dll_path in dll_candidates:
+        if os.path.exists(dll_path):
+            print(f"🔧 Trying to load: {dll_path}")
+            try:
+                nifly = cdll.LoadLibrary(dll_path)
+                print(f"✅ Successfully loaded: {os.path.basename(dll_path)}")
+                break
+            except Exception as e:
+                print(f"❌ Failed to load {os.path.basename(dll_path)}: {e}")
+
+    if nifly is None:
+        raise FileNotFoundError(f"Could not load any nifly DLL from {base_dir}")
+    # --- End Fix ---
+
+_____________________________________________________________________________________________
+
+pyffi
+
+
+# Bundled PyFFI for Skyrim Material Patcher
+
+This copy of PyFFI (v2.2.3, derived from BadDog’s fork) is bundled with the addon
+to guarantee compatibility with Blender’s Python 3.x runtime.
+
+The stock PyFFI release from 2013 relies on `time.clock()`, removed in Python 3.8+.
+Our copy replaces those calls with `time.perf_counter()` to prevent
+`AttributeError: module 'time' has no attribute 'clock'`.
+
+Bundling is required because:
+- Blender ships its own embedded Python that may or may not include PyFFI.
+- External PyFFI installations are often outdated or incompatible.
+- This ensures all users have the fixed, working version regardless of their system.
+
+Changes from upstream:
+- `time.clock()` → `time.perf_counter()` in `object_models/xml/__init__.py`
+- minor print and path adjustments for modern Blender versions
+- verified to load via the addon’s `safe_import` mechanism
+
+Do **not** overwrite this folder with a system install of PyFFI unless you
+re-apply the above patch.
+
+
+____________________________________________________________________________________________
+Blender-DDS-Addon
+
+# Blender DDS Addon – Script-Safe Fork
+This is a fork of [matyalatte/Blender-DDS-Addon](https://github.com/matyalatte/Blender-DDS-Addon), updated for compatibility with Blender 4.5 and extended to support scripted DDS exports (for example, from automated pipelines like pbrgen.py).
+
+## What This Addon Does
+The Blender DDS Addon enables importing and exporting of .DDS (DirectDraw Surface) texture files, supporting DirectX DXGI texture compression formats such as BC1–BC7, ASTC, and others. It uses external tools like texconv and astcenc for conversion and allows you to choose DXGI formats directly in Blender’s UI.
+
+## Why This Fork Exists
+The original addon assumes users will export DDS files through Blender’s UI panel, where a DXGI format can be selected manually. However, when the exporter is called from a Python script (for example, a batch exporter or render automation script), it fails with:
+
+RuntimeError: Select DXGI format.
+
+This occurs because the exporter checks only the image-level DXGI property (tex.dds_props.dxgi_format), which defaults to "NONE", and does not look at the global scene settings.
+
+## Fix Included in This Fork
+This fork modifies one file: blender_dds_addon/ui/export_dds.py
+
+Original code:
+if dxgi == "NONE":
+    raise RuntimeError("Select DXGI format.")
+
+Patched version:
+# --- patched for Blender 4.5 scripted export ---
+if dxgi in (None, "NONE", "None", ""):
+    # Try to fall back to the scene's DDS options
+    scene_opts = bpy.context.scene.dds_options
+    dxgi = getattr(scene_opts, "dxgi_format", dxgi)
+
+    # If still empty, check image DDS props directly
+    if dxgi in (None, "NONE", "None", "") and hasattr(tex, "dds_props"):
+        prop_fmt = getattr(tex.dds_props, "dxgi_format", "NONE")
+        if prop_fmt not in (None, "NONE", "None", ""):
+            dxgi = prop_fmt
+
+    # If still unset, throw the error
+    if dxgi in (None, "NONE", "None", ""):
+        raise RuntimeError("Select DXGI format (no valid DXGI format found).")
+
+This patch ensures:
+- Scripted exports now succeed without manual UI interaction.
+- The exporter automatically pulls the DXGI format from the scene-level DDS options if the image-level one is missing.
+- Full backward compatibility with UI-driven exports remains intact.
+
+## Usage
+Example scripted export:
+import bpy
+from blender_dds_addon.ui import export_dds as edds
+
+scene = bpy.context.scene
+scene.dds_options.dxgi_format = "BC7_UNORM"  # choose your DXGI format
+
+# Make sure to render or use an existing image
+bpy.ops.render.render(write_still=False)
+bpy.data.images['Render Result'].save_render("C:/Temp/temp.png")
+img = bpy.data.images.load("C:/Temp/temp.png")
+
+edds.export_as_dds(bpy.context, img, "C:/Temp/test.dds")
+print("DDS export complete.")
+
+## Summary
+- Fixed the RuntimeError: Select DXGI format. issue during script-driven exports.
+- Fully compatible with Blender 4.5.
+- No UI dependency — works in headless/batch render pipelines.
+- Safe fallback logic (Scene → Image) for DXGI selection.
+
+## Credits
+Original author: matyalatte (https://github.com/matyalatte)
+Script-safe patch and Blender 4.5 compatibility: babyjawz
+________________________________________________________________________________________________

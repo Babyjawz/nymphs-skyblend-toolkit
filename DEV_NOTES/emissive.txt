@@ -1,0 +1,44 @@
+SUMMARY FOR PATCH REQUEST — SKYRIM PBR ADDON (REAL CODEBASE FIX)
+
+You have a Blender 4.5+ add-on (__init__.py + nifparser.py) that imports Skyrim NIF materials using PyNifly. The add-on builds PBR materials correctly, but emissive color and strength are lost whenever “Build Nodes”, “Rebuild Nodes”, or “Build Selection” is run. The issue happens because Blender renamed the Principled BSDF input (“Emission” → “Emission Color”) and because the add-on’s live-update system resets emissive during rebuilds.
+
+Observed problems:
+- After NIF import, emissive works fine.
+- Running a rebuild clears emissive (sets black/1.0).
+- Console floods with “Emissive live: updated RGB+Strength … str=1.000”.
+- This happens because emissive live-sync updates while the node tree rebuilds.
+
+Goal:
+Keep emissive color and strength persistent after node rebuilds without breaking PBR node generation or live updates.
+
+Fix plan:
+1. Add a global variable near the top of the file:
+   _SMP_BUILDING = False
+
+2. In the functions _update_emission_strength, _update_emission_on, and _emissive_apply_to_nodes, add:
+   if _SMP_PROP_SYNC_GUARD or _SMP_BUILDING:
+       return
+   → Prevents emissive resets while building.
+
+3. In _apply_nif_emissive_to_bsdf_if_flag(mat), detect Blender 4.5+ input naming:
+   color_key = "Emission Color" if "Emission Color" in n_bsdf.inputs else "Emission"
+   → Then apply emissive color and strength safely.
+
+4. Wrap your unified node builder (like _build_nodes_for_material or _build_nodes_unified) in:
+   global _SMP_BUILDING
+   _SMP_BUILDING = True
+   try:
+       # existing node building logic
+       _restore_emissive_to_nodes(mat)
+   finally:
+       _SMP_BUILDING = False
+   → Ensures emissive data is reapplied only after build completes.
+
+Result:
+- Emissive color and strength persist across imports and rebuilds.
+- No console spam or emissive resets.
+- No changes to textures, PBR structure, or node layout.
+- Fully compatible with Blender 4.5+.
+
+Next step:
+Have the assistant apply this patch directly to the uploaded __init__.py (and nifparser.py if needed) using the REAL codebase with correct indentation and structure preserved.

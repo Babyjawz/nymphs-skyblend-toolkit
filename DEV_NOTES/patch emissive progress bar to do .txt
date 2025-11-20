@@ -1,0 +1,17 @@
+I’m working on a Blender add-on called **Skyrim Material Patcher**, which patches emissive materials in Skyrim `.nif` files.  
+It uses a **bundled version of PyFFI (v2.2.3)** stored in `thirdparty/pyffi`, isolated from Blender’s global Python installation.  
+The old `time.clock()` bug has been fixed, and the bundled PyFFI now loads correctly and works without requiring global installation.
+
+The patcher runs successfully, but it can take a **very long time** to process large modlists (hundreds or even thousands of NIFs).  
+Right now, it provides no visible feedback — Blender’s built-in progress spinner is tiny and almost invisible during long operations.
+
+I’d like to add a **proper graphical progress bar inside Blender’s UI**, not just a text-based or invisible one.  
+Ideally, this progress bar should appear as a visible overlay or panel in the add-on (for example, in the Tools tab or as a modal operator popup).  
+It should:  
+- Display a **clear progress percentage** or **animated bar** while patching.  
+- Show the **current file name** being processed and how many remain.  
+- Optionally allow the user to **cancel** the operation safely.  
+- Remain responsive and not freeze Blender’s interface during the batch process.
+
+Please help me design and integrate this kind of **graphical, interactive progress UI** directly into my existing add-on — specifically within the `SKPBR_OT_PatchEmissiveBatch` operator (in `__init__.py`) and the processing logic in `patch_emissive.py`.  
+I want it to look professional, run smoothly, and provide real-time feedback without blocking the UI thread.

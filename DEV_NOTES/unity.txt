@@ -1,0 +1,22 @@
+**Blender → Unity PBR Export Summary**
+
+- Add new export targets: `UNITY_HDRP` and `UNITY_URP`
+- **HDRP:** Pack MaskMap  
+  - R = Metallic  
+  - G = AO  
+  - B = 255 (placeholder or detail mask)  
+  - A = 1 − Roughness (Smoothness)
+- **URP:** Pack MetallicSmoothness + separate AO  
+  - RGB = Metallic (grayscale)  
+  - A = 1 − Roughness  
+  - Separate AO texture
+- Export: BaseColor, Normal, (optional Emissive)
+- Use suffixes:  
+  - `_BaseColor`, `_Normal`, `_MaskMap` (HDRP)  
+  - `_MetallicSmoothness`, `_Occlusion` (URP)
+- Keep alpha edge-bleed for foliage textures
+- In Unity:  
+  - Import textures  
+  - Run Editor script to auto-create Lit materials  
+  - Script assigns maps and enables alpha clipping if needed
+- ✅ Result: clean, consistent RMAOS → Unity HDRP/URP PBR pipeline

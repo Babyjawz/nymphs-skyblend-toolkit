@@ -1,0 +1,176 @@
+🧩 PBRGen Addon Context Summary
+⚙️ Environment
+
+Blender 4.5
+
+Windows 11
+
+Addon name: PBRGen (Skyrim PBR Texture Generator)
+
+Located in skyrim_mat_patcher/pbrgen.py
+
+Integrated with Matyalatte’s Blender DDS Addon for BC7 export
+→ (blender_dds_addon/ui/export_dds.py)
+
+The DDS export works (confirmed via console)
+→ example:
+
+[PBRGen] Saved DDS via Matyalatte export_as_dds: D:\3dTools\PBR\Elm\test\ElmLeves.dds
+
+🧱 What’s Working
+
+✅ UI loads correctly (Height/Normal, Roughness, AO, Metallic/Specular, Glow, etc.)
+✅ _basecolor.dds, _n.dds, _p.dds, _rmaos.dds export properly as DDS
+✅ DDS addon integration confirmed (“Matyalatte DDS addon detected”)
+✅ Progress bar / task cursor works
+✅ All base PBRGen functionality, paths, and property bindings are stable
+
+⚠️ The Current Problem
+
+The UI includes two optional toggles:
+
+“Complex Mask (_m)”
+
+“Spec/Subsurface Map (_s)”
+
+…but enabling them produces no console messages or output textures.
+There are no errors either — just silence.
+
+The debug print section:
+
+print(f"include_complex_mask = {s.include_complex_mask}")
+print(f"include_spec_map_s  = {s.include_spec_map_s}")
+print(f"s_mode              = {s.s_mode}")
+print(f"save_separate_rma   = {s.save_separate_rma}")
+
+prints correctly (so the UI state is being read),
+but no [DEBUG] Building complex mask (_m)... or [DEBUG] Building spec/subsurface map (_s)... ever appear.
+
+🔍 Likely Causes (based on current behavior)
+
+Conditional blocks never run:
+The code for _m and _s generation is nested incorrectly or unreachable
+(e.g., indented under a wrong scope, inside a try/except that’s never entered, or after a return).
+
+Variable references missing in context:
+The _m or _s generation section might depend on local vars (metal_u8, rough_u8, etc.)
+that are out of scope or shadowed by another function.
+
+No actual function calls:
+The helper functions make_complex_mask_m() and make_s_map() exist,
+but may never be invoked due to a misplaced if or commented-out code.
+
+No save_output() calls firing:
+If _m or _s maps are generated but save_output() isn’t called,
+Blender will not write them, so nothing appears in console or output.
+
+🧠 What’s Needed in the Patch
+
+In the main operator’s execute() (right after the RMAOS save section),
+ensure this block exists and is executed:
+
+# --- Complex Mask (_m.dds) ---
+if s.include_complex_mask:
+    print("[DEBUG] Building complex mask (_m)...")
+    m_mask = make_complex_mask_m(metal_u8, ao_u8, height_u8)
+    if m_mask is not None:
+        print(f"[DEBUG] m_mask built: {m_mask.shape}")
+        save_output(m_mask, src_path, out_dir, base, "m")
+
+# --- Spec/Subsurface Map (_s.dds) ---
+if s.include_spec_map_s:
+    print("[DEBUG] Building spec/subsurface map (_s)...")
+    s_map = make_s_map(src_rgb, rough_u8, mode=s.s_mode)
+    if s_map is not None:
+        print(f"[DEBUG] s_map built: {s_map.shape}")
+        save_output(s_map, src_path, out_dir, base, "s")
+
+
+✅ Make sure it’s before:
+
+
+wm.progress_end()
+self.report({'INFO'}, "Skyrim PBR set generated...")
+return {'FINISHED'}
+
+
+🧾 Expected Behavior After Fix
+
+When the toggles are on:
+
+
+=== [PBRGen] DEBUG PROPERTY SNAPSHOT ===
+include_complex_mask = True
+include_spec_map_s  = True
+s_mode              = LEAF
+save_separate_rma   = True
+====================================================
+
+[DEBUG] Building complex mask (_m)...
+[DEBUG] m_mask built: (2160, 2160, 4)
+[PBRGen] Saved DDS via Matyalatte export_as_dds: ..._m.dds
+[DEBUG] Building spec/subsurface map (_s)...
+[DEBUG] s_map built: (2160, 2160, 4)
+[PBRGen] Saved DDS via Matyalatte export_as_dds: ..._s.dds
+
+
+🧩 TL;DR for New Chat Prompt
+
+“I’m working on a Blender 4.5 addon called PBRGen, part of my Skyrim material patcher.
+It successfully generates _basecolor.dds, _n.dds, _p.dds, _rmaos.dds using Matyalatte’s DDS Addon.
+However, even though my UI toggles for _m (complex mask) and _s (spec/subsurface map) are checked,
+the operator never logs or saves them.
+
+The functions make_complex_mask_m() and make_s_map() exist in the script,
+but seem to never be executed.
+
+I need help ensuring those maps are properly called and saved,
+without altering any other logic, UI, or DDS export flow.”
+
+
+I'm debugging a Blender addon that generates **Skyrim PBR textures**.  
+I need accurate logic for generating these optional outputs:  
+- `_m.dds` — Complex/Environment Mask (used for complex materials and reflections)  
+- `_s.dds` — Specular or Subsurface Tint Map (used for specular color, gloss, or translucency)  
+
+The goal is to make these outputs follow **Skyrim PBR / PGPatcher conventions** exactly — as used by ParallaxGen and PGPatcher.  
+The addon already handles `_rmaos.dds` and base maps fine, but `_m` and `_s` are not working correctly.  
+I want to reconstruct proper generator logic for those two maps based on verified references.
+
+### Reference sources used so far
+- PGPatcher Wiki – Supported Shaders and Mod Author guidelines  
+  https://github.com/hakasapl/PGPatcher/wiki/Supported-Shaders  
+  https://github.com/hakasapl/PGPatcher/wiki/Mod-Authors  
+- PGPatcher main repository (for structure & shader support)  
+  https://github.com/hakasapl/PGPatcher  
+- STEP Modding Wiki – SkyrimSE Parallax documentation  
+  https://stepmodifications.org/wiki/SkyrimSE:Parallax  
+- Nexus Skyrim PBR / Parallax reference mod  
+  https://www.nexusmods.com/skyrimspecialedition/mods/86492  
+- NVIDIA Texture Tools & DXGI/BC7 documentation (for DDS compression accuracy)  
+  https://developer.nvidia.com/texture-tools-exporter  
+  https://learn.microsoft.com/en-us/windows/win32/direct3d10/d3d10-dds  
+- Verified vanilla Skyrim textures (`femalehead_s.dds`, `treeleaves_s.dds`, `ironarmor_s.dds`) show these conventions:  
+  `_s.dds` → RGB = tint/specular; A = gloss or subsurface scattering  
+  `_m.dds` → complex/envmask; channels vary (R = metal, G = reflection or specular mask, B = AO or roughness)  
+- Nexus Modding Wiki – Creating Skyrim PBR textures  
+  https://wiki.nexusmods.com/index.php/Creating_Skyrim_PBR_textures  
+- Skyrim Modding Discord (texture author discussions on `_m` and `_s` roles)  
+  https://discord.gg/skyrimmods  
+
+
+Now that you’ve read the context above, please generate a complete `pbrgen.py` script that:
+
+1. Keeps **all existing UI, logic, and Matyalatte DDS addon integration intact** (do not strip or rename anything).  
+2. Adds **accurate Skyrim PBR generation logic** for:  
+   - `_m.dds` (Complex/Environment Mask)  
+   - `_s.dds` (Specular/Subsurface Tint)  
+   - Improved `_rmaos.dds` using Skyrim-accurate channel weighting.  
+3. Follows PGPatcher and ParallaxGen conventions for channel packing and naming.  
+4. Uses the same UI toggle system already present (for enabling/disabling `_m` and `_s`).  
+5. Keeps all existing output path and DDS export logic as-is.  
+6. Outputs clear debug messages showing when `_m` and `_s` maps are generated.  
+
+The result should be a **complete, working `pbrgen.py`**, ready to replace the current one, not a minimal or partial example.
+
+Make it Blender 4.5 compatible and assume the Matyalatte DDS addon is already installed.

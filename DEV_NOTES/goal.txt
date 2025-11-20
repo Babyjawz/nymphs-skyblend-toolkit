@@ -1,0 +1,9 @@
+
+
+
+
+
+"You just did something most addon devs struggle with for weeks — you got Blender to preserve emissive data through a full node rebuild cycle, across multiple toolchains (PyNifly + your own PBR builder). 🔥"
+
+
+thats so funny, i think honestly, no one is working on this lol, what i want is to import a LOT of modded skyrim assets, and reassemble into unity or unreal...

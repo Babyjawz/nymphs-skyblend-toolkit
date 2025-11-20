@@ -1,0 +1,51 @@
+📦 Skyrim Material Patcher – Current Feature Summary (v1.9.8)
+🧱 Overview
+
+Skyrim Material Patcher (SMP) is a Blender 4.5 add-on that rebuilds and manages materials for imported Skyrim NIF meshes.
+It’s designed to work directly with PyNifly, reconstructing shader nodes automatically and applying texture, emissive, and alpha data from imported assets.
+
+The add-on provides two build modes:
+
+PBR (Physically-Based Rendering) – for materials using _rmaos or _orm texture sets.
+
+Vanilla (Classic Skyrim Shader) – for older non-PBR materials.
+
+Each material is given a custom skpbr property group to store per-material settings such as emissive color, strength, and force-build overrides.
+
+🧩 Core Systems
+🧠 Mode Detection
+
+_detect_pbr(textures) determines whether to build a PBR or vanilla layout.
+
+Detection is based on texture filename patterns (_rmaos.dds, _orm.dds, _metal.dds, etc.).
+
+The user can override this with the Force Build (PBR) checkbox in the material panel.
+
+🪜 Build Anchors
+
+_remember_mode_anchor() and _choose_anchor_for_mode() record texture search anchors based on:
+
+The original NIF import path.
+
+The texture directory structure.
+
+Manual override if provided.
+
+This system lets SMP rebuild materials even when textures are moved or located externally.
+
+Every rebuild logs the selected anchor mode (NIFPATH, SIBLING, or MANUAL).
+
+🎨 Node Construction
+🧩 PBR Node Build
+
+Builds a complete Principled BSDF material setup using:
+
+Base Color
+
+Normal Map
+
+Roughness / Metallic (from _rmaos or _orm textures)
+
+Displacement (optional)
+
+Adds an emissive chain:
