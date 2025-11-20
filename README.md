@@ -1,3 +1,8 @@
+<p align="center">
+  <img src="SkyBlendBanner.png" alt="Nymphs SkyBlend Toolkit Banner" width="100%">
+</p>
+
+
 # 🌌 Nymphs SkyBlend Toolkit
 
 A Blender addon suite for Skyrim modders — built by the Nymph Nerds for the Nymph Nerds.  
