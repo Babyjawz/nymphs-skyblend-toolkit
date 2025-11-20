@@ -50,3 +50,40 @@ See `docs/QUICKSTART.md` for the full guide.
 
 ## 📁 Repository Structure
 
+nymphs-skyblend-toolkit/
+│
+├─ nymphs_skyblend/ ← The addon (install this folder)
+├─ docs/ ← User guides & documentation
+├─ DEV_NOTES/ ← Internal dev notes (not for end users)
+├─ LICENSE ← GPL-3.0-or-later
+└─ README.md ← You are here
+
+
+---
+
+## 🔧 Installation (Developer-Friendly)
+
+To develop the addon:
+
+1. Clone this repo locally.
+2. In Blender: **Edit → Preferences → Add-ons → Install…**
+3. Select the folder `nymphs_skyblend` directly (not a ZIP).
+4. Press **F8** to reload scripts while editing.
+
+Blender will read the addon directly from your repo.
+
+---
+
+## 🧙 About
+
+Part of **Nymphs Savage World**  
+Made by the **Nymph Nerds**  
+Powered by questionable decisions and thicc PBR energy.
+
+---
+
+## 📝 License
+
+This project is licensed under the **GNU General Public License v3.0** (GPL-3.0-or-later).  
+See the `LICENSE` file for details.
+
