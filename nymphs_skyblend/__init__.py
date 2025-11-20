@@ -16,24 +16,20 @@
 #   - JSON export/import retains emissive + parallax data
 #   - Blender 4.5+ compatible (TLS-safe, internal Python 3.11)
 #
-# Upcoming:
-#   - Alpha Strength UI slider (transparency control)
-#   - Future NIF-driven PBR export for Unity/Unreal reassembly
-# ============================================================
-# Force-disable system/site PyFFI and load local version
-# ============================================================
+
 
 bl_info = {
-    "name": "Skyrim Material Patcher Unified",
-    "author": "babyjaws",
-    "version": (2, 0, 0),
+    "name": "Nymphs SkyBlend Toolkit",
+    "author": "Babyjawz / Nymph Nerds",
+    "version": (1, 0, 0),
     "blender": (4, 5, 0),
-    "location": "Shader Editor > N Panel > Skyrim PBR",
-    "description": "Unified Skyrim PBR builder with NIF emissive + PyNifly integration.",
+    "location": "3D Viewport > Sidebar > SkyBlend",
+    "description": "Tools for building and patching Skyrim materials, PBR workflows, and emissive fixes.",
     "category": "Material",
 }
 
-__version__ = "2.0.0"
+
+__version__ = "1.0.0"
 SMP_BUILD_TAG = "SMP_v200_unified"
 
 
@@ -2107,11 +2103,11 @@ class SKPBR_OT_PatchEmissiveBatch(bpy.types.Operator):
 
 
 class SKPBR_PT_UI(bpy.types.Panel):
-    bl_label = f"Skyrim Material Patcher v{__version__} — {' '.join(SMP_BUILD_TAG.split('_')[2:]).title()}"
+    bl_label = f"SkyBlend Toolkit v{__version__}"
     bl_idname = "SKPBR_PT_UI"
     bl_space_type = "VIEW_3D"
     bl_region_type = "UI"
-    bl_category = "Skyrim PBR"
+    bl_category = "SkyBlend"
 
     def draw(self, context):
         lay = self.layout
